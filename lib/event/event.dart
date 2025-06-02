@@ -2,11 +2,9 @@ import 'dart:async';
 import 'dart:ffi';
 import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
-import 'package:neonize/defproto/Neonize.pb.dart' as neonize;
-import 'package:neonize/defproto/waE2E/WAWebProtobufsE2E.pb.dart';
-import 'package:neonize/ffi/bindings.dart';
 import 'package:protobuf/protobuf.dart' as pb;
 import 'package:neonize/event/type.dart';
+import 'package:neonize/logging.dart';
 
 var globalCompleterEvent = Completer<bool>();
 
@@ -23,7 +21,7 @@ class Event {
     completerEvent = completer ?? globalCompleterEvent;
   }
   void on<T extends pb.GeneratedMessage>(EventHandler<T> callbackFunction) {
-    print('Registering callback for ${T.toString()}');
+    log.fine('Registering callback for ${T.toString()}');
     final typeId = typeToIntMap[T];
     if (typeId != null) {
       callback[typeId] = (pb.GeneratedMessage message) async {
@@ -44,7 +42,6 @@ class Event {
   }
 
   void qr(QREvent callbackFunction) {
-    print('Registering QR event callback ${callbackFunction}');
     qrEvent = (String qrData) async {
       await callbackFunction(qrData);
     };
@@ -75,7 +72,7 @@ class Event {
     // completerEvent.future;
   }
   void emit(int key, Uint8List data) async {
-    print("Emitting event with key: $key, data size: ${data.length}");
+    log.info("Emitting event with key: $key, data size: ${data.length}");
 
     // print("data: $data");
     pb.GeneratedMessage message;
@@ -83,7 +80,7 @@ class Event {
     final builder = intToTypeMap[key];
     if (builder != null) {
       message = builder(data);
-      print("Message created: $message");
+      log.info("Message created: $message");
     } else {
       throw Exception('Unsupported proto type key: $key');
     }

@@ -67,3 +67,29 @@ enum ReceiptType {
   const ReceiptType(this.value);
   
 }
+
+
+enum BlocklistAction{
+  block("block"),
+  unblock("unblock");
+  final String value;
+  const BlocklistAction(this.value);
+}
+
+enum ParticipantChangeType {
+  add("add"),
+  remove("remove"),
+  promote("promote"),
+  demote("demote");
+
+  final String value;
+  const ParticipantChangeType(this.value);
+}
+
+enum PresenceType{
+  available("available"),
+  unavailable("unavailable");
+
+  final String value;
+  const PresenceType(this.value);
+}

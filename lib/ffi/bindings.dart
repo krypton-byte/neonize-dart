@@ -1,5 +1,4 @@
 import 'dart:ffi' as ffi;
-import 'dart:mirrors';
 import 'structs.dart';
 
 // typedef GetVersionFunc = ffi.Pointer<ffi.UnsignedChar> Function();
@@ -949,7 +948,7 @@ final SendAppState sendAppState =
         .asFunction<SendAppState>();
 
 typedef SetDefaultDisappearingTimerNative =
-    ffi.Pointer<ffi.Char> Function(ffi.Pointer<ffi.Char> uuid, ffi.Int32 timer);
+    ffi.Pointer<ffi.Char> Function(ffi.Pointer<ffi.Char> uuid, ffi.Int64 timer);
 
 typedef SetDefaultDisappearingTimer =
     ffi.Pointer<ffi.Char> Function(ffi.Pointer<ffi.Char> uuid, int timer);
@@ -1211,12 +1210,17 @@ typedef GetProfilePictureNative =
       ffi.Pointer<ffi.Char> uuid,
       ffi.Pointer<ffi.UnsignedChar> jid,
       ffi.Size jidSize,
+      ffi.Pointer<ffi.UnsignedChar> params,
+      ffi.Size paramsSize,
+
     );
 typedef GetProfilePicture =
     ffi.Pointer<BytesStruct> Function(
       ffi.Pointer<ffi.Char> uuid,
       ffi.Pointer<ffi.UnsignedChar> jid,
       int jidSize,
+      ffi.Pointer<ffi.UnsignedChar> params,
+      int paramsSize,
     );
 final GetProfilePicture getProfilePicture =
     gocode
@@ -1255,6 +1259,13 @@ typedef GetSubscribedNewslettersNative =
     ffi.Pointer<BytesStruct> Function(ffi.Pointer<ffi.Char> uuid);
 typedef GetSubscribedNewsletters =
     ffi.Pointer<BytesStruct> Function(ffi.Pointer<ffi.Char> uuid);
+
+final GetSubscribedNewsletters getSubscribedNewsletters =
+    gocode
+        .lookup<ffi.NativeFunction<GetSubscribedNewslettersNative>>(
+          'GetSubscribedNewsletters',
+        )
+        .asFunction<GetSubscribedNewsletters>();
 typedef GetUserDevicesNative =
     ffi.Pointer<BytesStruct> Function(
       ffi.Pointer<ffi.Char> uuid,
@@ -1348,6 +1359,10 @@ typedef GetJoinedGroupsNative =
     ffi.Pointer<BytesStruct> Function(ffi.Pointer<ffi.Char> uuid);
 typedef GetJoinedGroups =
     ffi.Pointer<BytesStruct> Function(ffi.Pointer<ffi.Char> uuid);
+final GetJoinedGroups getJoinedGroups =
+    gocode
+        .lookup<ffi.NativeFunction<GetJoinedGroupsNative>>('GetJoinedGroups')
+        .asFunction<GetJoinedGroups>();
 typedef GetMeNative =
     ffi.Pointer<BytesStruct> Function(ffi.Pointer<ffi.Char> uuid);
 typedef GetMe = ffi.Pointer<BytesStruct> Function(ffi.Pointer<ffi.Char> uuid);
@@ -1484,3 +1499,18 @@ typedef SendFBMessageNative =
       ffi.Pointer<ffi.UnsignedChar> extra,
       ffi.Size extraSize,
     );
+typedef SendFBMessage = ffi.Pointer<BytesStruct> Function(
+      ffi.Pointer<ffi.Char> uuid,
+      ffi.Pointer<ffi.UnsignedChar> toJid,
+      int toJidSize,
+      ffi.Pointer<ffi.UnsignedChar> messageBytes,
+      int messageSize,
+      ffi.Pointer<ffi.UnsignedChar> metadata,
+      int metadataSize,
+      ffi.Pointer<ffi.UnsignedChar> extra,
+      int extraSize,
+    );
+final SendFBMessage sendFBMessage =
+    gocode
+        .lookup<ffi.NativeFunction<SendFBMessageNative>>('SendFBMessage')
+        .asFunction<SendFBMessage>();

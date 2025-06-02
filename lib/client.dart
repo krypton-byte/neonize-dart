@@ -1,15 +1,15 @@
 import 'dart:async';
 import 'dart:ffi';
-import 'dart:isolate';
 import 'dart:typed_data';
 
-import 'package:logging/logging.dart';
+import 'package:neonize/defproto/waConsumerApplication/WAConsumerApplication.pb.dart';
+import 'package:neonize/defproto/waMsgApplication/WAMsgApplication.pb.dart';
 import 'package:neonize/enum.dart' as enums;
 import 'package:neonize/ffi/structs.dart';
 import 'package:neonize/ffi/utils.dart';
 
 import 'ffi/bindings.dart' as binder;
-import 'defproto/waE2E/WAWebProtobufsE2E.pb.dart' as waE2E;
+import 'defproto/waE2E/WAWebProtobufsE2E.pb.dart' as wa_e2e;
 import 'event/event.dart';
 import 'logging.dart';
 import 'defproto/waCompanionReg/WACompanionReg.pb.dart';
@@ -22,18 +22,22 @@ import 'package:ffi/ffi.dart';
 
 class NewAClient {
   String name;
-  late Pointer<Char> uuid;
   Config config;
-  late Event event;
   JID? jid;
-  DeviceProps? deviceProps;
   Completer<bool>? complete;
-  NewAClient({required this.name, String? id, required this.config}) {
+  late Pointer<Char> uuid;
+  late Event event;
+  late DeviceProps devicePropsConfig;
+  NewAClient({required this.name, String? id, required this.config, DeviceProps? deviceProps}) {
     event = Event();
     uuid = (id ?? name).toNativeUtf8().cast<Char>();
     if (complete != null) {
       event.completerEvent = complete!;
     }
+    devicePropsConfig = deviceProps ?? DeviceProps(
+      os: 'neonize',
+      platformType: DeviceProps_PlatformType.SAFARI,
+    );
   }
   void on<T extends GeneratedMessage>(EventHandler<T> callback) {
     event.on<T>(callback);
@@ -67,7 +71,7 @@ class NewAClient {
 
   Future<UploadReturnFunction> uploadNewsletter(
     Uint8List data,
-    MediaType mediaType,
+    enums.MediaType mediaType,
   ) async {
     final response = await Future(() {
       binder.uploadNewsletter(
@@ -83,7 +87,7 @@ class NewAClient {
   Future<UploadReturnFunction> upload(
     Uint8List data,
     String fileName,
-    MediaType mediaType,
+    enums.MediaType mediaType,
   ) async {
     final dataBuff = bytesAllocator(data).cast<UnsignedChar>();
     final result = await Future(() {
@@ -94,14 +98,14 @@ class NewAClient {
 
   Future<void> sendMessage(
     JID to, {
-    waE2E.Message? message,
+    wa_e2e.Message? message,
     String? text,
   }) async {
     if (message == null && text == null) {
       throw Exception('Either message or text must be provided');
     }
     if (message == null && text != null) {
-      message = waE2E.Message(conversation: text);
+      message = wa_e2e.Message(conversation: text);
     }
     if (message != null) {
       final msgBuff = message.writeToBuffer();
@@ -119,40 +123,31 @@ class NewAClient {
 
   Future<void> connect() async {
     // Implementasi koneksi jika diperlukan
-    deviceProps ??= DeviceProps(
-      os: 'neonize',
-      platformType: DeviceProps_PlatformType.UNKNOWN,
-    );
-    final devicePropsBytes = deviceProps!.writeToBuffer();
+    final devicePropsBytes = devicePropsConfig.writeToBuffer();
     Uint8List jidbuff = Uint8List(0);
     if (jid != null) {
       jidbuff = jid!.writeToBuffer();
     }
     final loglevel = "INFO"; // bisa diisi sesuai kebutuhan
     final subscribers = event.getSubscriber();
-    print('Connecting to Neonize with parameters:');
-    print('Database Path: ${config.databasePath}');
-    print('UUID: $uuid');
-    print('JID Buffer: ${jidbuff.length} bytes');
-    print('Log Level: $loglevel');
-    print('Subscribers: ${subscribers.length} bytes');
-    print('Device Properties: ${devicePropsBytes.length} bytes');
-    Zone.current;
-    final currentIsolate = Isolate.current;
-    print(
-      "Callback berjalan di isolate yang valid: ${currentIsolate.hashCode}",
-    );
-    final Nemit = NativeCallable<binder.EventCallback>.isolateLocal(
+    log.fine('Connecting to Neonize with parameters:');
+    log.fine('Database Path: ${config.databasePath}');
+    log.fine('UUID: $uuid');
+    log.fine('JID Buffer: ${jidbuff.length} bytes');
+    log.fine('Log Level: $loglevel');
+    log.fine('Subscribers: ${subscribers.length} bytes');
+    log.fine('Device Properties: ${devicePropsBytes.length} bytes');
+    final emitter = NativeCallable<binder.EventCallback>.isolateLocal(
       event.rawEmit,
     );
-    final NemitQR = NativeCallable<binder.QrCallback>.isolateLocal(
+    final qrEmitter = NativeCallable<binder.QrCallback>.isolateLocal(
       event.onRawQr,
     );
-    final NemitLogginStatus =
+    final loginStatusEmitter =
         NativeCallable<binder.OnLogginStatusCallback>.isolateLocal(
           event.onLogginStatus,
         );
-    final NemitBlockingFunctionCallback =
+    final blockingFunctionCallback =
         NativeCallable<binder.BlockingFunction>.isolateLocal(
           event.blockingFunctionCallback,
         );
@@ -168,12 +163,12 @@ class NewAClient {
       bytesAllocator(jidbuff).cast<UnsignedChar>(),
       jidbuff.length,
       loglevel.toNativeUtf8().cast<Char>(),
-      NemitQR.nativeFunction,
-      NemitLogginStatus.nativeFunction,
-      Nemit.nativeFunction,
+      qrEmitter.nativeFunction,
+      loginStatusEmitter.nativeFunction,
+      emitter.nativeFunction,
       bytesAllocator(subscribers).cast<UnsignedChar>(),
       subscribers.length,
-      NemitBlockingFunctionCallback.nativeFunction,
+      blockingFunctionCallback.nativeFunction,
       bytesAllocator(devicePropsBytes).cast<UnsignedChar>(),
       devicePropsBytes.length,
       bytesAllocator(
@@ -192,7 +187,7 @@ class NewAClient {
     log.fine('Disconnected from Neonize.');
   }
 
-  Future<Uint8List> downloadAny(waE2E.Message message) {
+  Future<Uint8List> downloadAny(wa_e2e.Message message) {
     final buffer = message.writeToBuffer();
     return Future(() {
       final response = binder.downloadAny(
@@ -256,18 +251,6 @@ class NewAClient {
     return response;
   }
 
-  Future<GetUserInfoReturnFunction> getUserDevices(JID user) async {
-    final response = await Future(() {
-      final jidBuffer = user.writeToBuffer();
-      final response = binder.getUserDevices(
-        uuid,
-        bytesAllocator(jidBuffer).cast<UnsignedChar>(),
-        jidBuffer.length,
-      );
-      return Bytes(response).getBytes();
-    });
-    return GetUserInfoReturnFunction.fromBuffer(response);
-  }
 
   Future<GetGroupInfoReturnFunction> getGroupInfo(JID groupJid) async {
     final response = await Future(() {
@@ -489,7 +472,7 @@ class NewAClient {
     return response;
   }
 
-  Future<waE2E.Message> buildRevokeMessage(
+  Future<wa_e2e.Message> buildRevokeMessage(
     JID chat,
     JID sender,
     String messageId,
@@ -507,10 +490,10 @@ class NewAClient {
       );
       return Bytes(result).getBytes();
     });
-    return waE2E.Message.fromBuffer(response);
+    return wa_e2e.Message.fromBuffer(response);
   }
 
-  Future<waE2E.Message> buildPollVoteCreationMessage(
+  Future<wa_e2e.Message> buildPollVoteCreationMessage(
     String name,
     Iterable<String> options,
     enums.VoteType voteType,
@@ -526,7 +509,7 @@ class NewAClient {
       );
       return Bytes(result).getBytes();
     });
-    return waE2E.Message.fromBuffer(response);
+    return wa_e2e.Message.fromBuffer(response);
   }
 
   Future<CreateNewsLetterReturnFunction> createNewsletter(
@@ -676,5 +659,563 @@ class NewAClient {
       }
     });
   }
+  Future<NewsletterLiveUpdate> newsletterSubscribeLiveUpdates(
+    JID jid
+  ) async {
+    final result = await Future(() {
+      final jidBuffer = jid.writeToBuffer();
+      final result = binder.newsletterSubscribeLiveUpdates(
+        uuid,
+        bytesAllocator(jidBuffer).cast<UnsignedChar>(),
+        jidBuffer.length,
+      );
+      return NewsletterLiveUpdate.fromBuffer(Bytes(result).getBytes());
+    });
+    return result;
+  }
+  Future<void> newsletterToggleMute(JID jid, bool mute) async {
+    final response = await Future(() {
+      final jidBuffer = jid.writeToBuffer();
+      final result = binder.newsletterToggleMute(
+        uuid,
+        bytesAllocator(jidBuffer).cast<UnsignedChar>(),
+        jidBuffer.length,
+        mute,
+      );
+      return result.cast<Utf8>().toDartString();
+    });
+    if (response != "") {
+      throw Exception(response);
+    }
+  }
+  Future<ResolveContactQRLinkReturnFunction> resolveContactQRLink(
+    String code,
+  ) async {
+    final response = await Future(() {
+      final result = binder.resolveContactQRLink(
+        uuid,
+        code.toNativeUtf8().cast<Char>(),
+      );
+      return Bytes(result).getBytes();
+    });
+    return ResolveContactQRLinkReturnFunction.fromBuffer(response);
+  }
+  Future<void> sendAppState(PatchInfo patchInfo) async {
+    final response = await Future(() {
+      final patchInfoBuffer = patchInfo.writeToBuffer();
+      binder.sendAppState(
+        uuid,
+        bytesAllocator(patchInfoBuffer).cast<UnsignedChar>(),
+        patchInfoBuffer.length,
+      );
+    });
+    if (response != "") {
+      throw Exception(response);
+    }
+  }
+  Future<void> setDefaultDisappearingTimer(
+    int timer,
+  ) async {
+    final response = await Future(() {
+      final result = binder.setDefaultDisappearingTimer(
+        uuid,
+        timer,
+      );
+      return result.cast<Utf8>().toDartString();
+    });
+    if (response != "") {
+      throw Exception(response);
+    }
+  }
+  Future<void> setForceActiveDeliveryReceipts(bool active)async{
+    await Future(() {
+      binder.setForceActiveDeliveryReceipts(
+        uuid,
+        active,
+      );
+    });
+  }
+  Future<void> setGroupAnnounce(
+    JID groupJid,
+    bool announce,
+  ) async {
+    final response = await Future(() {
+      final groupJidBuffer = groupJid.writeToBuffer();
+      final result = binder.setGroupAnnounce(
+        uuid,
+        bytesAllocator(groupJidBuffer).cast<UnsignedChar>(),
+        groupJidBuffer.length,
+        announce,
+      );
+      return result.cast<Utf8>().toDartString();
+    });
+    if (response != "") {
+      throw Exception(response);
+    }
+  }
+  Future<void> setGroupTopic(
+    JID groupJid,
+    int previousID,
+    int newId,
+    String topic,
+  ) async {
+    final response = await Future(() {
+      final groupJidBuffer = groupJid.writeToBuffer();
+      final result = binder.setGroupTopic(
+        uuid,
+        bytesAllocator(groupJidBuffer).cast<UnsignedChar>(),
+        groupJidBuffer.length,
+        previousID,
+        newId,
+        topic.toNativeUtf8().cast<Char>(),
+      );
+      return result.cast<Utf8>().toDartString();
+    });
+    if (response != "") {
+      throw Exception(response);
+    }
+  }
+  Future<SetPrivacySettingReturnFunction> setPrivacySetting(String name, String value) async {
+    final response = await Future(() {
+      final result = binder.setPrivacySetting(
+        uuid,
+        name.toNativeUtf8().cast<Char>(),
+        value.toNativeUtf8().cast<Char>(),
+      );
+      return Bytes(result).getBytes();
+    });
+    return SetPrivacySettingReturnFunction.fromBuffer(response);
 
+  }
+
+  Future<void> setPassive(bool passive) async {
+    final response = await Future(() {
+      binder.setPassive(uuid, passive);
+    });
+    if (response != "") {
+      throw Exception(response);
+    }
+  }
+  Future<void> setStatusMessage(
+    String statusMessage,
+  ) async {
+    final response = await Future(() {
+      final result = binder.setStatusMessage(
+        uuid,
+        statusMessage.toNativeUtf8().cast<Char>(),
+      );
+      return result.cast<Utf8>().toDartString();
+    });
+    if (response != "") {
+      throw Exception(response);
+    }
+  }
+  Future<void> subscribePresence(
+    JID jid,
+  ) async {
+    final response = await Future(() {
+      final jidBuffer = jid.writeToBuffer();
+      binder.subscribePresence(
+        uuid,
+        bytesAllocator(jidBuffer).cast<UnsignedChar>(),
+        jidBuffer.length,
+      );
+    });
+    if (response != "") {
+      throw Exception(response);
+    }
+  }
+
+  Future<void> unfollowNewsletter(
+    JID jid,
+  ) async {
+    final response = await Future(() {
+      final jidBuffer = jid.writeToBuffer();
+      binder.unfollowNewsletter(
+        uuid,
+        bytesAllocator(jidBuffer).cast<UnsignedChar>(),
+        jidBuffer.length,
+      );
+    });
+    if (response != "") {
+      throw Exception(response);
+    }
+  }
+
+  Future<void> unlinkGroup(
+    JID parentGroupJid,
+    JID childGroupJid,
+  ) async {
+    final response = await Future(() {
+      final parentGroupJidBuffer = parentGroupJid.writeToBuffer();
+      final childGroupJidBuffer = childGroupJid.writeToBuffer();
+      final result = binder.unlinkGroup(
+        uuid,
+        bytesAllocator(parentGroupJidBuffer).cast<UnsignedChar>(),
+        parentGroupJidBuffer.length,
+        bytesAllocator(childGroupJidBuffer).cast<UnsignedChar>(),
+        childGroupJidBuffer.length,
+      );
+      return result.cast<Utf8>().toDartString();
+    });
+    if (response != "") {
+      throw Exception(response);
+    }
+  }
+  Future<GetBlocklistReturnFunction> updateBlocklist(JID jid, enums.BlocklistAction action)async {
+    final response = await Future(() {
+      final jidBuffer = jid.writeToBuffer();
+      final result = binder.updateBlocklist(
+        uuid,
+        bytesAllocator(jidBuffer).cast<UnsignedChar>(),
+        jidBuffer.length,
+        action.value.toNativeUtf8().cast<Char>(),
+      );
+      return GetBlocklistReturnFunction.fromBuffer(Bytes(result).getBytes());
+    });
+    if (response.error != "") {
+      throw Exception(response.error);
+    }
+    return response;
+  }
+  Future<UpdateGroupParticipantsReturnFunction> updateGroupParticipants(
+    JID groupJid,
+    Iterable<JID> participants,
+    enums.ParticipantChangeType action,
+  ) async {
+    final response = await Future(() {
+      final groupJidBuffer = groupJid.writeToBuffer();
+      final participantsBuffer = JIDArray(jIDS: participants).writeToBuffer();
+      final result = binder.updateGroupParticipants(
+        uuid,
+        bytesAllocator(groupJidBuffer).cast<UnsignedChar>(),
+        groupJidBuffer.length,
+        bytesAllocator(participantsBuffer).cast<UnsignedChar>(),
+        participantsBuffer.length,
+        action.value.toNativeUtf8().cast<Char>(),
+      );
+      return UpdateGroupParticipantsReturnFunction.fromBuffer(Bytes(result).getBytes());
+    });
+    if (response.error != "") {
+      throw Exception(response.error);
+    }
+    return response;
+  }
+  Future<PrivacySettings> getPrivacySettings() async {
+    final response = await Future(() {
+      final result = binder.getPrivacySettings(uuid);
+      return Bytes(result).getBytes();
+    });
+    return PrivacySettings.fromBuffer(response);
+  }
+  Future<GetProfilePictureReturnFunction> getProfilePicture(
+    JID jid,
+    {GetProfilePictureParams? params}
+  ) async {
+    final extra = params??GetProfilePictureParams();
+    final response = await Future(() {
+      final jidBuffer = jid.writeToBuffer();
+      final paramsBuffer = extra.writeToBuffer();
+      final result = binder.getProfilePicture(
+        uuid,
+        bytesAllocator(jidBuffer).cast<UnsignedChar>(),
+        jidBuffer.length,
+        bytesAllocator(paramsBuffer).cast<UnsignedChar>(),
+        paramsBuffer.length,
+      );
+      return Bytes(result).getBytes();
+    });
+    final result = GetProfilePictureReturnFunction.fromBuffer(response);
+    if (result.error != "") {
+      throw Exception(result.error);
+    }
+    return result;
+  }
+  Future<GetStatusPrivacyReturnFunction> getStatusPrivacy() async {
+    final response = await Future(() {
+      final result = binder.getStatusPrivacy(
+        uuid,
+      );
+      return Bytes(result).getBytes();
+    });
+    final result = GetStatusPrivacyReturnFunction.fromBuffer(response);
+    if (result.error != "") {
+      throw Exception(result.error);
+    }
+    return result;
+  }
+  Future<GetSubGroupsReturnFunction> getSubGroups(
+    JID groupJid,
+  ) async {
+    final response = await Future(() {
+      final groupJidBuffer = groupJid.writeToBuffer();
+      final result = binder.getSubGroups(
+        uuid,
+        bytesAllocator(groupJidBuffer).cast<UnsignedChar>(),
+        groupJidBuffer.length,
+      );
+      return Bytes(result).getBytes();
+    });
+    final result = GetSubGroupsReturnFunction.fromBuffer(response);
+    if (result.error != "") {
+      throw Exception(result.error);
+    }
+    return result;
+  }
+  Future<GetSubscribedNewslettersReturnFunction> getSubscribedNewsletters(
+  ) async {
+    final response = await Future(() {
+      final result = binder.getSubscribedNewsletters(
+        uuid,
+      );
+      return Bytes(result).getBytes();
+    });
+    final result = GetSubscribedNewslettersReturnFunction.fromBuffer(response);
+    if (result.error != "") {
+      throw Exception(result.error);
+    }
+    return result;
+  }
+  Future<GetUserDevicesreturnFunction> getUserDevices(
+    JID jid,
+  ) async {
+    final response = await Future(() {
+      final jidBuffer = jid.writeToBuffer();
+      final result = binder.getUserDevices(
+        uuid,
+        bytesAllocator(jidBuffer).cast<UnsignedChar>(),
+        jidBuffer.length,
+      );
+      return Bytes(result).getBytes();
+    });
+    final result = GetUserDevicesreturnFunction.fromBuffer(response);
+    if (result.error != "") {
+      throw Exception(result.error);
+    }
+    return result;
+  }
+  Future<GetBlocklistReturnFunction> getBlocklist() async {
+    final response = await Future(() {
+      final result = binder.getBlocklist(
+        uuid,
+      );
+      return Bytes(result).getBytes();
+    });
+    final result = GetBlocklistReturnFunction.fromBuffer(response);
+    if (result.error != "") {
+      throw Exception(result.error);
+    }
+    return result;
+  }
+  Future<BuildPollVoteReturnFunction> buildPollVote(
+    MessageInfo pollInfo,
+    Iterable<String> options,
+  ) async {
+    final response = await Future(() {
+      final pollInfoBuffer = pollInfo.writeToBuffer();
+      final optionsBuffer = ArrayString(data: options).writeToBuffer();
+      final result = binder.buildPollVote(
+        uuid,
+        bytesAllocator(pollInfoBuffer).cast<UnsignedChar>(),
+        pollInfoBuffer.length,
+        bytesAllocator(optionsBuffer).cast<UnsignedChar>(),
+        optionsBuffer.length,
+      );
+      return Bytes(result).getBytes();
+    });
+    final result = BuildPollVoteReturnFunction.fromBuffer(response);
+    if (result.error != "") {
+      throw Exception(result.error);
+    }
+    return result;
+  }
+  Future<wa_e2e.Message> buildReaction(
+    JID chat,
+    JID sender,
+    String reaction,
+    String messageId,
+  ) async {
+    final response = await Future(() {
+      final chatBuffer = chat.writeToBuffer();
+      final senderBuffer = sender.writeToBuffer();
+      final result = binder.buildReaction(
+        uuid,
+        bytesAllocator(chatBuffer).cast<UnsignedChar>(),
+        chatBuffer.length,
+        bytesAllocator(senderBuffer).cast<UnsignedChar>(),
+        senderBuffer.length,
+        reaction.toNativeUtf8().cast<Char>(),
+        messageId.toNativeUtf8().cast<Char>(),
+      );
+      return Bytes(result).getBytes();
+    });
+    return wa_e2e.Message.fromBuffer(response);
+  }
+  Future<GetGroupInfoReturnFunction> createGroup(
+    String name,
+    Iterable<JID> participants,
+    GroupLinkedParent? groupLinkedParent,
+    GroupParent? groupParent,
+  ) async {
+    final response = await Future(() {
+      final groupInfo = ReqCreateGroup(
+        name: name,
+        participants: participants,
+        groupParent: groupParent,
+        groupLinkedParent: groupLinkedParent,
+      );
+      final groupInfoBuffer = groupInfo.writeToBuffer();
+      final result = binder.createGroup(
+        uuid,
+        bytesAllocator(groupInfoBuffer).cast<UnsignedChar>(),
+        groupInfoBuffer.length,
+      );
+      return Bytes(result).getBytes();
+    });
+    return GetGroupInfoReturnFunction.fromBuffer(response);
+  }
+  Future<GetJoinedGroupsReturnFunction> getJoinedGroups() async {
+    final response = await Future(() {
+      final result = binder.getJoinedGroups(uuid);
+      return Bytes(result).getBytes();
+    });
+    final result = GetJoinedGroupsReturnFunction.fromBuffer(response);
+    if (result.error != "") {
+      throw Exception(result.error);
+    }
+    return result;
+  }
+  Future<Device> getMe() async {
+    final response = await Future(() {
+      final result = binder.getMe(uuid);
+      return Bytes(result).getBytes();
+    });
+    return Device.fromBuffer(response);
+  }
+  Future<GetContactQRLinkReturnFunction> getContactQRLink(
+    bool revoke
+  ) async {
+    final response = await Future(() {
+      final result = binder.getContactQRLink(
+        uuid,
+        revoke,
+      );
+      return Bytes(result).getBytes();
+    });
+    return GetContactQRLinkReturnFunction.fromBuffer(response);
+  }
+  Future<GetMessageForRetryReturnFunction> getMessageForRetry(
+    JID requester,
+    JID to,
+    String messageId,
+  ) async {
+    final response = await Future(() {
+      final requesterBuffer = requester.writeToBuffer();
+      final toBuffer = to.writeToBuffer();
+      final result = binder.getMessageForRetry(
+        uuid,
+        bytesAllocator(requesterBuffer).cast<UnsignedChar>(),
+        requesterBuffer.length,
+        bytesAllocator(toBuffer).cast<UnsignedChar>(),
+        toBuffer.length,
+        messageId.toNativeUtf8().cast<Char>(),
+      );
+      return Bytes(result).getBytes();
+    });
+    return GetMessageForRetryReturnFunction.fromBuffer(response);
+  }
+  Future<void> putPinned(
+    JID chat,
+    bool pinned,
+  ) async {
+    final response = await Future(() {
+      final chatBuffer = chat.writeToBuffer();
+      binder.putPinned(
+        uuid,
+        bytesAllocator(chatBuffer).cast<UnsignedChar>(),
+        chatBuffer.length,
+        pinned,
+      );
+    });
+    if (response != "") {
+      throw Exception(response);
+    }
+  }
+  Future<void> putArchived(
+    JID chat,
+    bool archived,
+  ) async {
+    final response = await Future(() {
+      final chatBuffer = chat.writeToBuffer();
+      binder.putArchived(
+        uuid,
+        bytesAllocator(chatBuffer).cast<UnsignedChar>(),
+        chatBuffer.length,
+        archived,
+      );
+    });
+    if (response != "") {
+      throw Exception(response);
+    }
+  }
+  static Future<String> getAllDevices(String dbPath) async {
+    final response = await Future(() {
+      final result = binder.getAllDevices(dbPath.toNativeUtf8().cast<Char>());
+      return result.cast<Utf8>().toDartString();
+    });
+    return response;
+  }
+  Future<String> sendPresence(enums.PresenceType presenceType) async {
+    final response = await Future(() {
+      final result = binder.sendPresence(
+        uuid,
+        presenceType.value.toNativeUtf8().cast<Char>(),
+      );
+      return result.cast<Utf8>().toDartString();
+    });
+    if (response != "") {
+      throw Exception(response);
+    }
+    return response;
+  }
+  Future<ReturnFunctionWithError> decryptPollVote(
+    wa_e2e.Message message,
+  ) async {
+    final response = await Future(() {
+      final messageBuffer = message.writeToBuffer();
+      final result = binder.decryptPollVote(
+        uuid,
+        bytesAllocator(messageBuffer).cast<UnsignedChar>(),
+        messageBuffer.length,
+      );
+      return Bytes(result).getBytes();
+    });
+    return ReturnFunctionWithError.fromBuffer(response);
+  }
+  Future<SendResponse> sendFBMessage(
+    JID to,
+    ConsumerApplication message,
+    MessageApplication_Metadata metadata,
+    SendRequestExtra extras
+  ) async {
+    final response = await Future(() {
+      final toBuffer = to.writeToBuffer();
+      final messageBuffer = message.writeToBuffer();
+      final metadataBuffer = metadata.writeToBuffer();
+      final extrasBuffer = extras.writeToBuffer();
+      final result = binder.sendFBMessage(
+        uuid,
+        bytesAllocator(toBuffer).cast<UnsignedChar>(),
+        toBuffer.length,
+        bytesAllocator(messageBuffer).cast<UnsignedChar>(),
+        messageBuffer.length,
+        bytesAllocator(metadataBuffer).cast<UnsignedChar>(),
+        metadataBuffer.length,
+        bytesAllocator(extrasBuffer).cast<UnsignedChar>(),
+        extrasBuffer.length,
+      );
+      return Bytes(result).getBytes();
+    });
+    return SendResponse.fromBuffer(response);
+  }
 }
