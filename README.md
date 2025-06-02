@@ -11,9 +11,18 @@
 
 *A powerful Dart wrapper for [Neonize](https://github.com/krypton-byte/neonize) - enabling seamless WhatsApp automation in your Dart and Flutter applications*
 
-[Getting Started](#-getting-started) • [Features](#-features) • [Examples](#-examples) • [Documentation](#-documentation) • [Contributing](#-contributing)
+---
+
+## ⚠️ **DEVELOPMENT STATUS - NOT READY FOR PRODUCTION**
+
+> **🚧 WORK IN PROGRESS 🚧**
+> 
+> **This project is currently under active development and is NOT ready for production use.**
+> 
 
 ---
+
+[Getting Started](#-getting-started) • [Features](#-features) • [Examples](#-examples) • [Documentation](#-documentation) • [Contributing](#-contributing)
 
 </div>
 
