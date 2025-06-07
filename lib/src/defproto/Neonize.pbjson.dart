@@ -2370,6 +2370,7 @@ const GetMessageForRetryReturnFunction$json = {
   '2': [
     {'1': 'isEmpty', '3': 1, '4': 1, '5': 8, '7': 'false', '10': 'isEmpty'},
     {'1': 'Message', '3': 2, '4': 1, '5': 11, '6': '.WAWebProtobufsE2E.Message', '10': 'Message'},
+    {'1': 'Error', '3': 3, '4': 1, '5': 9, '10': 'Error'},
   ],
 };
 
@@ -2377,7 +2378,7 @@ const GetMessageForRetryReturnFunction$json = {
 final $typed_data.Uint8List getMessageForRetryReturnFunctionDescriptor = $convert.base64Decode(
     'CiBHZXRNZXNzYWdlRm9yUmV0cnlSZXR1cm5GdW5jdGlvbhIfCgdpc0VtcHR5GAEgASgIOgVmYW'
     'xzZVIHaXNFbXB0eRI0CgdNZXNzYWdlGAIgASgLMhouV0FXZWJQcm90b2J1ZnNFMkUuTWVzc2Fn'
-    'ZVIHTWVzc2FnZQ==');
+    'ZVIHTWVzc2FnZRIUCgVFcnJvchgDIAEoCVIFRXJyb3I=');
 
 @$core.Deprecated('Use localChatSettingsDescriptor instead')
 const LocalChatSettings$json = {
@@ -2436,4 +2437,27 @@ final $typed_data.Uint8List sendRequestExtraDescriptor = $convert.base64Decode(
     'ChBTZW5kUmVxdWVzdEV4dHJhEg4KAklEGAEgAigJUgJJRBIwCgxJbmxpbmVCb3RKSUQYAiACKA'
     'syDC5uZW9uaXplLkpJRFIMSW5saW5lQm90SklEEhIKBFBlZXIYAyACKAhSBFBlZXISGAoHVGlt'
     'ZW91dBgEIAIoA1IHVGltZW91dBIgCgtNZWRpYUhhbmRsZRgFIAIoCVILTWVkaWFIYW5kbGU=');
+
+@$core.Deprecated('Use buildMessageReturnFunctionDescriptor instead')
+const BuildMessageReturnFunction$json = {
+  '1': 'BuildMessageReturnFunction',
+  '2': [
+    {'1': 'Error', '3': 1, '4': 2, '5': 9, '10': 'Error'},
+    {'1': 'Message', '3': 2, '4': 2, '5': 11, '6': '.WAWebProtobufsE2E.Message', '10': 'Message'},
+  ],
+};
+
+/// Descriptor for `BuildMessageReturnFunction`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List buildMessageReturnFunctionDescriptor = $convert.base64Decode(
+    'ChpCdWlsZE1lc3NhZ2VSZXR1cm5GdW5jdGlvbhIUCgVFcnJvchgBIAIoCVIFRXJyb3ISNAoHTW'
+    'Vzc2FnZRgCIAIoCzIaLldBV2ViUHJvdG9idWZzRTJFLk1lc3NhZ2VSB01lc3NhZ2U=');
+
+@$core.Deprecated('Use stopDescriptor instead')
+const Stop$json = {
+  '1': 'Stop',
+};
+
+/// Descriptor for `Stop`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List stopDescriptor = $convert.base64Decode(
+    'CgRTdG9w');
 

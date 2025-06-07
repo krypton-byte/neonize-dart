@@ -9267,10 +9267,12 @@ class GetMessageForRetryReturnFunction extends $pb.GeneratedMessage {
   factory GetMessageForRetryReturnFunction({
     $core.bool? isEmpty,
     $1.Message? message,
+    $core.String? error,
   }) {
     final result = create();
     if (isEmpty != null) result.isEmpty = isEmpty;
     if (message != null) result.message = message;
+    if (error != null) result.error = error;
     return result;
   }
 
@@ -9282,6 +9284,7 @@ class GetMessageForRetryReturnFunction extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'GetMessageForRetryReturnFunction', package: const $pb.PackageName(_omitMessageNames ? '' : 'neonize'), createEmptyInstance: create)
     ..aOB(1, _omitFieldNames ? '' : 'isEmpty', protoName: 'isEmpty')
     ..aOM<$1.Message>(2, _omitFieldNames ? '' : 'Message', protoName: 'Message', subBuilder: $1.Message.create)
+    ..aOS(3, _omitFieldNames ? '' : 'Error', protoName: 'Error')
     ..hasRequiredFields = false
   ;
 
@@ -9321,6 +9324,15 @@ class GetMessageForRetryReturnFunction extends $pb.GeneratedMessage {
   void clearMessage() => $_clearField(2);
   @$pb.TagNumber(2)
   $1.Message ensureMessage() => $_ensure(1);
+
+  @$pb.TagNumber(3)
+  $core.String get error => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set error($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasError() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearError() => $_clearField(3);
 }
 
 /// chat_setting_store
@@ -9603,6 +9615,95 @@ class SendRequestExtra extends $pb.GeneratedMessage {
   $core.bool hasMediaHandle() => $_has(4);
   @$pb.TagNumber(5)
   void clearMediaHandle() => $_clearField(5);
+}
+
+class BuildMessageReturnFunction extends $pb.GeneratedMessage {
+  factory BuildMessageReturnFunction({
+    $core.String? error,
+    $1.Message? message,
+  }) {
+    final result = create();
+    if (error != null) result.error = error;
+    if (message != null) result.message = message;
+    return result;
+  }
+
+  BuildMessageReturnFunction._();
+
+  factory BuildMessageReturnFunction.fromBuffer($core.List<$core.int> data, [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(data, registry);
+  factory BuildMessageReturnFunction.fromJson($core.String json, [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'BuildMessageReturnFunction', package: const $pb.PackageName(_omitMessageNames ? '' : 'neonize'), createEmptyInstance: create)
+    ..aQS(1, _omitFieldNames ? '' : 'Error', protoName: 'Error')
+    ..aQM<$1.Message>(2, _omitFieldNames ? '' : 'Message', protoName: 'Message', subBuilder: $1.Message.create)
+  ;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  BuildMessageReturnFunction clone() => BuildMessageReturnFunction()..mergeFromMessage(this);
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  BuildMessageReturnFunction copyWith(void Function(BuildMessageReturnFunction) updates) => super.copyWith((message) => updates(message as BuildMessageReturnFunction)) as BuildMessageReturnFunction;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static BuildMessageReturnFunction create() => BuildMessageReturnFunction._();
+  @$core.override
+  BuildMessageReturnFunction createEmptyInstance() => create();
+  static $pb.PbList<BuildMessageReturnFunction> createRepeated() => $pb.PbList<BuildMessageReturnFunction>();
+  @$core.pragma('dart2js:noInline')
+  static BuildMessageReturnFunction getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<BuildMessageReturnFunction>(create);
+  static BuildMessageReturnFunction? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get error => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set error($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasError() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearError() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $1.Message get message => $_getN(1);
+  @$pb.TagNumber(2)
+  set message($1.Message value) => $_setField(2, value);
+  @$pb.TagNumber(2)
+  $core.bool hasMessage() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearMessage() => $_clearField(2);
+  @$pb.TagNumber(2)
+  $1.Message ensureMessage() => $_ensure(1);
+}
+
+class Stop extends $pb.GeneratedMessage {
+  factory Stop() => create();
+
+  Stop._();
+
+  factory Stop.fromBuffer($core.List<$core.int> data, [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(data, registry);
+  factory Stop.fromJson($core.String json, [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'Stop', package: const $pb.PackageName(_omitMessageNames ? '' : 'neonize'), createEmptyInstance: create)
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Stop clone() => Stop()..mergeFromMessage(this);
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Stop copyWith(void Function(Stop) updates) => super.copyWith((message) => updates(message as Stop)) as Stop;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static Stop create() => Stop._();
+  @$core.override
+  Stop createEmptyInstance() => create();
+  static $pb.PbList<Stop> createRepeated() => $pb.PbList<Stop>();
+  @$core.pragma('dart2js:noInline')
+  static Stop getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<Stop>(create);
+  static Stop? _defaultInstance;
 }
 
 

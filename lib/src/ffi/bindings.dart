@@ -87,8 +87,6 @@ typedef ConnectNative =
       ffi.Pointer<ffi.NativeFunction<EventCallback>> eventCallback,
       ffi.Pointer<ffi.UnsignedChar> subscribes,
       ffi.Int32 subscribesSize,
-      ffi.Pointer<ffi.NativeFunction<BlockingFunction>>
-      blockingFunctionCallback,
       ffi.Pointer<ffi.UnsignedChar> deviceProps,
       ffi.Size devicePropsSize,
       ffi.Pointer<ffi.UnsignedChar> pairPhone,
@@ -107,8 +105,6 @@ typedef Connect =
       ffi.Pointer<ffi.NativeFunction<EventCallback>> eventCallback,
       ffi.Pointer<ffi.UnsignedChar> subscribes,
       int subscribesSize,
-      ffi.Pointer<ffi.NativeFunction<BlockingFunction>>
-      blockingFunctionCallback,
       ffi.Pointer<ffi.UnsignedChar> deviceProps,
       int devicePropsSize,
       ffi.Pointer<ffi.UnsignedChar> pairPhone,
@@ -1514,3 +1510,12 @@ final SendFBMessage sendFBMessage =
     gocode
         .lookup<ffi.NativeFunction<SendFBMessageNative>>('SendFBMessage')
         .asFunction<SendFBMessage>();
+
+typedef FreeBytesStructNative =
+    ffi.Void Function(ffi.Pointer<BytesStruct> bytesStruct);
+
+typedef FreeBytesStruct = void Function(ffi.Pointer<BytesStruct> bytesStruct);
+final FreeBytesStruct freeBytesStruct =
+    gocode
+        .lookup<ffi.NativeFunction<FreeBytesStructNative>>('FreeBytesStruct')
+        .asFunction<FreeBytesStruct>();

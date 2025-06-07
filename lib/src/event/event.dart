@@ -3,47 +3,39 @@ import 'dart:ffi';
 import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 import 'package:protobuf/protobuf.dart' as pb;
-import 'package:neonize/event/type.dart';
-import 'package:neonize/logging.dart';
+import 'package:neonize/src/event/type.dart';
+import 'package:neonize/src/logging.dart';
 
-var globalCompleterEvent = Completer<bool>();
 
 typedef EventHandler<T extends pb.GeneratedMessage> =
-    Future<void> Function(T message);
-typedef QREvent = Future<void> Function(String qrData);
+    void Function(T message);
+typedef QREvent = void Function(String qrData);
 typedef Emit = void Function(int key, Pointer<UnsignedChar> data, int size);
 
 class Event {
   Map<int, EventHandler<pb.GeneratedMessage>> callback = {};
-  QREvent qrEvent = (String qrData) async {};
-  late Completer<bool> completerEvent;
-  Event({Completer<bool>? completer}) {
-    completerEvent = completer ?? globalCompleterEvent;
-  }
+  QREvent qrEvent = (String qrData) {};
   void on<T extends pb.GeneratedMessage>(EventHandler<T> callbackFunction) {
     log.fine('Registering callback for ${T.toString()}');
     final typeId = typeToIntMap[T];
     if (typeId != null) {
-      callback[typeId] = (pb.GeneratedMessage message) async {
-        await callbackFunction(message as T);
+      callback[typeId] = (pb.GeneratedMessage message) {
+        callbackFunction(message as T);
       };
     } else {
       throw Exception('Unknown event type: ${T.toString()}');
     }
   }
 
-  void waitForComplete() async {
-    await completerEvent.future;
-  }
 
   void onRawQr(Pointer<Char> uuid, Pointer<Char> qrDataPointer) {
     String qrData = qrDataPointer.cast<Utf8>().toDartString();
-    qrEvent(qrData).then((_) => {});
+    qrEvent(qrData);
   }
 
   void qr(QREvent callbackFunction) {
-    qrEvent = (String qrData) async {
-      await callbackFunction(qrData);
+    qrEvent = (String qrData) {
+      callbackFunction(qrData);
     };
   }
 
@@ -58,7 +50,7 @@ class Event {
     Pointer<UnsignedChar> dataPointer,
     int size,
     int code,
-  ) async {
+  ) {
     Uint8List data = dataPointer.cast<Uint8>().asTypedList(size);
     // Check if key is in expected range (1-44)
     emit(code, data);
@@ -68,10 +60,10 @@ class Event {
     print(data.cast<Utf8>().toDartString());
   }
 
-  void blockingFunctionCallback(Pointer<Char> uuid, bool data) async {
+  void blockingFunctionCallback(Pointer<Char> uuid, bool data) {
     // completerEvent.future;
   }
-  void emit(int key, Uint8List data) async {
+  void emit(int key, Uint8List data) {
     log.info("Emitting event with key: $key, data size: ${data.length}");
 
     // print("data: $data");
@@ -84,6 +76,6 @@ class Event {
     } else {
       throw Exception('Unsupported proto type key: $key');
     }
-    callback[key]?.call(message).then((_) => {});
+    callback[key]?.call(message);
   }
 }

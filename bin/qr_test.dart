@@ -1,4 +1,4 @@
-import 'package:neonize/qr.dart';
+import 'package:neonize/neonize.dart';
 
 
 void main() {

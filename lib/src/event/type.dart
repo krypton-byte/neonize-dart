@@ -1,4 +1,4 @@
-import 'package:neonize/defproto/Neonize.pb.dart' as neonize;
+import 'package:neonize/src/defproto/Neonize.pb.dart' as neonize;
 import 'package:protobuf/protobuf.dart' as pb;
 const Map<Type, int> typeToIntMap = {
     neonize.QR: 1,

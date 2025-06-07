@@ -1,4 +1,4 @@
-import 'package:neonize/defproto/Neonize.pb.dart';
+import 'package:neonize/src/defproto/Neonize.pb.dart';
 
 JID buildJID(String phoneNumber){
   return JID(

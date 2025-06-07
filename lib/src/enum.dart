@@ -1,6 +1,4 @@
-import 'dart:ffi';
 
-import 'package:ffi/ffi.dart';
 
 enum MediaType {
   mediaImage(0),
@@ -15,12 +13,12 @@ enum MediaType {
   const MediaType(this.value);
 }
 
-enum ChatPresence {
+enum ChatPresenceType {
   composing(0),
   paused(1);
 
   final int value;
-  const ChatPresence(this.value);
+  const ChatPresenceType(this.value);
 }
 
 enum ChatPresenceMedia {

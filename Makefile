@@ -2,7 +2,7 @@ MAKEFILE_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
 # Path utama
 DEFPROTO_PATH := $(MAKEFILE_DIR)defproto
-OUT_PROTO_PATH := $(MAKEFILE_DIR)lib/defproto
+OUT_PROTO_PATH := $(MAKEFILE_DIR)lib/src/defproto
 
 # Normalisasi path (untuk Windows dan Unix)
 fixpath = $(subst \\,/,$(1))

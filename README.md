@@ -26,6 +26,8 @@
 
 </div>
 
+<img src="assets/20250607_2049_Futuristic WhatsApp Automation_simple_compose_01jx5ac85hfk28c8bwq899sq58.png"/>
+
 ## ✨ What is Neonize Dart?
 
 **Neonize Dart** is a comprehensive Dart wrapper around the powerful [Neonize](https://github.com/krypton-byte/neonize) shared library, bringing WhatsApp automation capabilities directly to your Dart and Flutter projects.
@@ -57,7 +59,6 @@
 - 🚫 Blocklist management
 
 ### Developer Experience
-- 🎨 Modern async/await patterns
 - 🔄 Event-driven architecture
 - 📊 Built-in logging and debugging
 - 🗄️ SQLite and PostgreSQL database support
@@ -82,13 +83,9 @@ dependencies:
 ### Quick Start
 
 ```dart
-import 'package:neonize/client.dart';
-import 'package:neonize/config.dart';
-import 'package:neonize/defproto/Neonize.pb.dart';
-import 'package:neonize/helpers.dart';
-import 'package:neonize/qr.dart';
+import 'package:neonize/neonize.dart';
 
-void main() async {
+void main() {
   // Initialize the client
   final client = NewAClient(
     name: 'my-whatsapp-bot',
@@ -99,12 +96,12 @@ void main() async {
   );
 
   // Handle incoming messages
-  client.on<Message>((message) async {
+  client.on<Message>((message) {
     print('📨 Received: ${message.message}');
     
     // Auto-reply example
     if (message.message?.conversation?.toLowerCase() == 'hello') {
-      await client.sendMessage(
+      client.sendMessage(
         message.info!.messageSource!.chat!,
         text: '👋 Hello there! How can I help you?'
       );
@@ -112,87 +109,257 @@ void main() async {
   });
 
   // Handle QR code for authentication
-  client.qr((qrData) async {
+  client.qr((qrData) {
     print('📱 Scan this QR code with WhatsApp:');
     qrTerminal(qrData, 2, size: 10);
   });
 
   // Handle connection events
-  client.on<Connected>((event) async {
+  client.on<Connected>((event) {
     print('🎉 Connected to WhatsApp!');
   });
 
   // Start the client
-  await client.connect();
+  client.connect();
 }
 ```
 
 ## 💡 Examples
 
-### Send a Message
+### 📱 Basic Client Setup
 
 ```dart
-// Send text message
-await client.sendMessage(
-  buildJID("1234567890"), 
+import 'package:neonize/neonize.dart';
+import 'dart:io';
+
+void main() {
+  // Initialize the WhatsApp client
+  final client = NewAClient(
+    name: 'my-whatsapp-bot',
+    config: Config(
+      tempPath: '/tmp',
+      databasePath: './neonize.db',
+    ),
+  );
+
+  // Setup QR code authentication
+  client.qr((qrData) {
+    print('📱 Scan this QR code with WhatsApp:');
+    qrTerminal(qrData, 2, size: 10);
+  });
+
+  // Handle successful connection
+  client.on<Connected>((event) {
+    print('🎉 Successfully connected to WhatsApp!');
+  });
+
+  // Start the client
+  client.connect();
+}
+```
+
+### 💬 Sending Messages
+
+```dart
+// Send simple text message
+client.sendMessage(
+  buildJID('1234567890'), 
   text: 'Hello from Neonize Dart! 🚀'
 );
 
-// Send with media
-await client.sendMessage(
-  buildJID("1234567890"),
-  text: 'Check out this image!',
-  // Add media handling here
+// Send image with caption
+final imageFile = File('/path/to/your/image.jpg');
+final imageBytes = imageFile.readAsBytesSync();
+
+final imageMessage = client.buildImageMessage(
+  imageBytes,
+  'Check out this amazing image! 📸',
+  'image/jpeg',
+  Uint8List(0), // thumbnail (optional)
+);
+
+client.sendMessage(
+  buildJID('1234567890'),
+  message: imageMessage,
+);
+
+// Send document file
+final document = File('/path/to/document.pdf');
+final documentBytes = document.readAsBytesSync();
+
+final documentMessage = client.buildDocumentMessage(
+  documentBytes,
+  'document.pdf',
+  'Here is the document you requested',
+  'application/pdf',
+);
+
+client.sendMessage(
+  buildJID('1234567890'),
+  message: documentMessage,
 );
 ```
 
-### Group Management
+### 🎭 Message Event Handling
 
 ```dart
-// Get group info
-final groupInfo = await client.getGroupInfo(groupJID);
-print('Group: ${groupInfo.groupName}');
+// Handle incoming text messages
+client.on<Message>((message) {
+  final messageText = message.message?.conversation;
+  final senderJID = message.info?.messageSource?.sender;
+  final chatJID = message.info?.messageSource?.chat;
+  
+  print('📨 Received from $senderJID: $messageText');
+  
+  // Auto-reply functionality
+  if (messageText?.toLowerCase() == 'hello') {
+    client.sendMessage(chatJID, text: 'Hello there! 👋');
+  } else if (messageText?.toLowerCase() == 'help') {
+    const helpText = '''
+🤖 *Bot Commands:*
+• hello - Get a greeting
+• help - Show this help message
+• time - Get current time
+• joke - Get a random joke
+''';
+    client.sendMessage(chatJID, text: helpText);
+  }
+});
 
-// Add participants
-await client.updateGroupParticipants(
-  groupJID, 
-  [userJID], 
-  ParticipantAction.add
-);
-```
-
-### Event Handling
-
-```dart
-// Listen for different event types
+// Handle message receipts (delivery status)
 client.on<Receipt>((receipt) {
-  print('📧 Message receipt: ${receipt.type}');
+  print('📧 Message ${receipt.type}: ${receipt.messageIds}');
 });
 
-client.on<Presence>((presence) {
-  print('👁️ User presence: ${presence.from} is ${presence.type}');
-});
-
+// Handle typing indicators
 client.on<ChatPresence>((chatPresence) {
-  print('💬 Chat activity in ${chatPresence.messageSource?.chat}');
+  final chat = chatPresence.messageSource?.chat;
+  final participant = chatPresence.messageSource?.sender;
+  print('💬 $participant is typing in $chat');
 });
+```
+
+### 👥 Group Management
+
+```dart
+// Create a new group
+final participants = [
+  buildJID('1234567890'),
+  buildJID('0987654321'),
+];
+
+final groupInfo = client.createGroup(
+  'My Awesome Group 🚀',
+  participants,
+);
+print('🎉 Group created: ${groupInfo.jid}');
+
+// Get group information
+final groupInfo = client.getGroupInfo(...);
+print('📋 Group Name: ${groupInfo.groupName}');
+print('📝 Description: ${groupInfo.groupDesc}');
+print('👥 Participants: ${groupInfo.participants?.length ?? 0}');
+
+// Add participants to group
+client.updateGroupParticipants(
+  jidGroup,
+  [userJid],
+  ParticipantAction.add,
+);
+
+// Remove participants from group
+client.updateGroupParticipants(
+  jidGroup,
+  [userJid],
+  ParticipantAction.remove,
+);
+
+// Update group name
+client.updateGroupName(
+  jidGroup,
+  'New Group Name 🎯',
+);
+
+// Update group description
+client.updateGroupDescription(
+  jidGroup,
+  'This is our updated group description',
+);
+```
+
+### 🔍 Contact & Profile Management
+
+```dart
+// Get user profile information
+final profile = client.getProfilePicture(
+  jidUser,
+  true, // get full resolution
+);
+print('👤 Profile picture URL: ${profile.url}');
+print('🆔 Profile ID: ${profile.id}');
+
+// Update your own status
+client.setPresence(Presence.available);
+print('✅ Status updated to available');
+
+// Get contact information
+final isRegistered = client.isOnWhatsApp(['1234567890']);
+if (isRegistered.isNotEmpty && isRegistered.first.isIn) {
+  print('✅ User is registered on WhatsApp');
+  print('📱 JID: ${isRegistered.first.jid}');
+} else {
+  print('❌ User is not on WhatsApp');
+}
+
+// Check if multiple contacts are on WhatsApp
+final contacts = ['1234567890', '0987654321', '1122334455'];
+final registeredContacts = client.isOnWhatsApp(contacts);
+for (final contact in registeredContacts) {
+  if (contact.isIn) {
+    print('✅ ${contact.jid} is on WhatsApp');
+  } else {
+    print('❌ ${contact.query} is not on WhatsApp');
+  }
+}
 ```
 
 ## 🏗️ Project Structure
 
 ```
 neonize-dart/
-├── lib/
-│   ├── client.dart          # Main client implementation
-│   ├── config.dart          # Configuration classes
-│   ├── defproto/           # Protocol buffer definitions
-│   ├── event/              # Event handling system
-│   ├── ffi/                # FFI bindings and utilities
-│   └── helpers.dart        # Utility functions
-├── bin/
-│   └── main.dart           # Example application
-├── test/                   # Test suites
-└── README.md
+├── bin
+│   ├── main.dart
+│   └── qr_test.dart
+├── CHANGELOG.md
+├── lib
+│   ├── neonize.dart
+│   └── src
+│       ├── client.dart
+│       ├── config.dart
+│       ├── enum.dart
+│       ├── error.dart
+│       ├── event
+│       │   ├── event.dart
+│       │   └── type.dart
+│       ├── ffi
+│       │   ├── bindings.dart
+│       │   ├── structs.dart
+│       │   └── utils.dart
+│       ├── helpers
+│       │   ├── helpers.dart
+│       │   └── image.dart
+│       ├── logging.dart
+│       └── qr.dart
+├── LICENSE
+├── Makefile
+├── neonize.db
+├── neonize-linux-amd64.so
+├── pubspec.lock
+├── pubspec.yaml
+├── README.md
+├── scripts
+├── test
+│   └── neonize_test.dart
 ```
 
 ## 📖 Documentation
