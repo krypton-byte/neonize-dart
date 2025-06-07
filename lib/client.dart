@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ffi';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:neonize/defproto/waConsumerApplication/WAConsumerApplication.pb.dart';
@@ -17,7 +18,7 @@ import 'package:protobuf/protobuf.dart';
 import 'defproto/Neonize.pb.dart';
 import 'config.dart';
 import 'package:ffi/ffi.dart';
-
+import 'package:fixnum/fixnum.dart' as fixnum;
 // typedef Callback = Void Function(Pointer<Utf8>);
 
 class NewAClient {
@@ -84,19 +85,24 @@ class NewAClient {
     return UploadReturnFunction.fromBuffer(Bytes(response).getBytes());
   }
 
-  Future<UploadReturnFunction> upload(
+  Future<UploadResponse> upload(
     Uint8List data,
-    String fileName,
     enums.MediaType mediaType,
   ) async {
+    print('Uploading data of length: ${data.length} bytes with media type: ${mediaType.value}');
     final dataBuff = bytesAllocator(data).cast<UnsignedChar>();
     final result = await Future(() {
       binder.upload(uuid, dataBuff, data.length, mediaType.value);
     });
-    return UploadReturnFunction.fromBuffer(Bytes(result).getBytes());
+    final response = UploadReturnFunction.fromBuffer(Bytes(result).getBytes());
+    if(response.error != "") {
+      throw Exception(result.error);
+    }
+    print('Upload successful: ${response.uploadResponse}');
+    return response.uploadResponse;
   }
 
-  Future<void> sendMessage(
+  Future<SendMessageReturnFunction> sendMessage(
     JID to, {
     wa_e2e.Message? message,
     String? text,
@@ -110,13 +116,41 @@ class NewAClient {
     if (message != null) {
       final msgBuff = message.writeToBuffer();
       final toBuff = to.writeToBuffer();
-      binder.sendMessage(
+      final response = binder.sendMessage(
         uuid,
         bytesAllocator(toBuff).cast<UnsignedChar>(),
         toBuff.length,
         bytesAllocator(msgBuff).cast<UnsignedChar>(),
         msgBuff.length,
       );
+      print("send");
+      
+      // Add null check for response
+      if (response == nullptr) {
+        throw Exception('Native sendMessage returned null response');
+      }
+      
+      try {
+        final bytes = Bytes(response);
+        final responseData = bytes.getBytes();
+        
+        // Check if we have valid data
+        if (responseData.isEmpty) {
+          throw Exception('Empty response from native sendMessage');
+        }
+        
+        final result = SendMessageReturnFunction.fromBuffer(responseData);
+        print("send2");
+        
+        if (result.error != "") {
+          throw Exception(result.error);
+        }
+        return result;
+      } catch (e) {
+        // Handle protobuf parsing errors
+        throw Exception('Failed to parse sendMessage response: $e');
+      }
+      return result;
     }
     throw Exception('message not null');
   }
@@ -1177,6 +1211,23 @@ class NewAClient {
       throw Exception(response);
     }
     return response;
+  }
+  Future<wa_e2e.Message> buildImageMessage(Uint8List buffer,String caption, String mime, Uint8List jpegThumbnail, {wa_e2e.Message? quoted, bool? viewonce} ) async {
+    print("Building image message with caption: $caption");
+    final uploadResponse = await upload(buffer, enums.MediaType.mediaImage);
+    return wa_e2e.Message(
+      imageMessage: wa_e2e.ImageMessage(
+        uRL: uploadResponse.url,
+        caption: caption,
+        directPath: uploadResponse.directPath,
+        fileLength: fixnum.Int64(uploadResponse.fileLength),
+        fileEncSHA256: uploadResponse.fileEncSHA256,
+        fileSHA256: uploadResponse.fileSHA256,
+        mediaKey: uploadResponse.mediaKey,
+        mimetype: mime,
+        viewOnce: false
+      )
+    );
   }
   Future<ReturnFunctionWithError> decryptPollVote(
     wa_e2e.Message message,

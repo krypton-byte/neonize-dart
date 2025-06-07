@@ -1,6 +1,11 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:neonize/client.dart';
 import 'package:neonize/config.dart';
 import 'package:neonize/defproto/Neonize.pb.dart';
+import 'package:neonize/defproto/waE2E/WAWebProtobufsE2E.pb.dart' as wa_e2e;
+import 'package:neonize/enum.dart';
 import 'package:neonize/qr.dart';
 
 
@@ -11,7 +16,7 @@ void main() async {
     name: 'my-whatsapp-bot',
     config: Config(
       tempPath: '/tmp',
-      databasePath: './whatsapp.db',
+      databasePath: './neonize.db',
     ),
   );
 
@@ -21,9 +26,21 @@ void main() async {
     
     // Auto-reply example
     if (message.message?.conversation?.toLowerCase() == 'hello') {
-      await client.sendMessage(
+      print("🤖 Auto-reply sent start!");
+
+      final response = await client.sendMessage(
         message.info!.messageSource!.chat!,
         text: '👋 Hello there! How can I help you?'
+      );
+      print(response);
+      print("🤖 Auto-reply sent!");
+      final img = await File("/home/krypton-byte/Downloads/_9aa4e484-ae7c-4f02-9b08-cf556f7ad727.jpg").readAsBytes();
+      print("📸 Building image message...");
+      final result = await client.buildImageMessage(img, "hai", "image/jpeg", Uint8List(0));
+      print("📸 Image message built successfully!");
+      await client.sendMessage(
+        message.info!.messageSource!.chat!,
+        message:result
       );
     }
   });
