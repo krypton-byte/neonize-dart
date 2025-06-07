@@ -1,219 +1,219 @@
 import 'dart:io';
 import 'package:logging/logging.dart';
 import 'package:neonize/neonize.dart';
-import 'package:neonize/src/ffi/bindings.dart';
 
-/// 🚀 Contoh Sederhana Bot WhatsApp dengan Neonize
+/// 🚀 Simple WhatsApp Bot Example with Neonize
 /// 
-/// Contoh ini menunjukkan:
-/// - Setup bot WhatsApp yang mudah
-/// - Menangani pesan masuk
-/// - Membalas pesan secara otomatis
-/// - Menggunakan kode sinkron (bukan async)
+/// This example shows:
+/// - Easy WhatsApp bot setup
+/// - Handling incoming messages
+/// - Auto-replying to messages
+/// - Using synchronous code (not async)
 
 void main() {
   Logger.root.level = Level.ALL;
-  print('🤖 Memulai Bot WhatsApp Sederhana...');
+  print('🤖 Starting Simple WhatsApp Bot...');
   // log.level = Level.ALL;
-  // Buat client WhatsApp
+  // Create WhatsApp client
   final client = NewAClient(
-    name: 'bot-sederhana',
+    name: 'simple-bot',
     config: Config(
       tempPath: '/tmp',
       databasePath: './neonize.db',
     ),
   );
 
-  // Setup handler untuk QR code
+  // Setup QR code handler
   setupQRHandler(client);
   
-  // Setup handler untuk pesan
+  // Setup message handler
   setupMessageHandler(client);
   
-  // Setup handler untuk koneksi
+  // Setup connection handler
   setupConnectionHandler(client);
 
-  // Mulai koneksi
-  print('🔗 Menghubungkan ke WhatsApp...');
+  // Start connection
+  print('🔗 Connecting to WhatsApp...');
   client.connect();
   
-  // Jaga agar program tetap berjalan
+  // Keep program running
   keepAlive();
 }
 
-/// Handler untuk QR code authentication
+/// Handler for QR code authentication
 void setupQRHandler(NewAClient client) {
   client.qr((qrData) {
-    print('\n📱 Scan QR code ini dengan WhatsApp:');
-    qrTerminal(qrData, 2, size: 8);
-    print('\nSilahkan scan QR code di atas dengan aplikasi WhatsApp Anda');
+    print('\n📱 Scan this QR code with WhatsApp:');
+    print("qr data: $qrData");
+    qrTerminal(qrData, 2, size: 10);
+    print('\nPlease scan the QR code above with your WhatsApp application');
   });
 }
 
-/// Handler untuk pesan masuk
+/// Handler for incoming messages
 void setupMessageHandler(NewAClient client) {
   client.on<Message>((message) {
-    // Ambil teks pesan
-    final teksPersan = message.message?.conversation;
+    // Get message text
+    final messageText = message.message?.conversation;
     
-    // Jika tidak ada teks, skip
-    if (teksPersan == null || teksPersan.isEmpty) {
+    // If no text, skip
+    if (messageText == null || messageText.isEmpty) {
       return;
     }
     
-    // Ambil info chat
+    // Get chat info
     final chat = message.info?.messageSource?.chat;
     if (chat == null) {
       return;
     }
     
-    print('📨 Pesan masuk: "$teksPersan"');
+    print('📨 Incoming message: "$messageText"');
     
-    // Balas pesan berdasarkan konten
-    balasPersan(client, chat, teksPersan);
-    print('✅ Membalas pesan: "$teksPersan"');
+    // Reply to message based on content
+    replyToMessage(client, chat, messageText);
+    print('✅ Replied to message: "$messageText"');
   });
 }
 
-/// Handler untuk status koneksi
+/// Handler for connection status
 void setupConnectionHandler(NewAClient client) {
   client.on<Connected>((event) {
-    print('✅ Berhasil terhubung ke WhatsApp!');
-    print('🤖 Bot siap menerima pesan...');
+    print('✅ Successfully connected to WhatsApp!');
+    print('🤖 Bot is ready to receive messages...');
   });
 }
 
-/// Fungsi untuk membalas pesan
-void balasPersan(NewAClient client, chat, String teksPersan) {
-  final teksLower = teksPersan.toLowerCase();
+/// Function to reply to messages
+void replyToMessage(NewAClient client, chat, String messageText) {
+  final textLower = messageText.toLowerCase();
   
   try {
-    if (teksLower == 'halo' || teksLower == 'hai' || teksLower == 'hello') {
-      // Balas sapaan
-      print('👋 Menerima sapaan: "$teksPersan"');
-      client.sendMessage(chat, text: '👋 Halo juga! Apa kabar?');
-      print('✅ Membalas sapaan');
+    if (textLower == 'hello' || textLower == 'hi' || textLower == 'hey') {
+      // Reply to greeting
+      print('👋 Received greeting: "$messageText"');
+      client.sendMessage(chat, text: '👋 Hello! How can I help you?');
+      print('✅ Replied to greeting');
       
-    } else if (teksLower.contains('apa kabar')) {
-      // Balas kabar
-      client.sendMessage(chat, text: '😊 Kabar baik! Terima kasih sudah bertanya. Bagaimana dengan Anda?');
-      print('✅ Membalas pertanyaan kabar');
+    } else if (textLower.contains('how are you')) {
+      // Reply to inquiry about well-being
+      client.sendMessage(chat, text: '😊 I am fine! Thank you for asking. How about you?');
+      print('✅ Replied to well-being inquiry');
       
-    } else if (teksLower.contains('siapa kamu') || teksLower.contains('siapa anda')) {
-      // Perkenalan
-      client.sendMessage(chat, text: '🤖 Saya adalah bot WhatsApp yang dibuat dengan Neonize. Saya bisa membalas pesan Anda!');
-      print('✅ Membalas perkenalan');
+    } else if (textLower.contains('who are you') || textLower.contains('what is your name')) {
+      // Introduction
+      client.sendMessage(chat, text: '🤖 I am a WhatsApp bot created with Neonize. I can reply to your messages!');
+      print('✅ Replied with introduction');
       
-    } else if (teksLower.contains('bantuan') || teksLower.contains('help')) {
-      // Bantuan
-      final pesanBantuan = '''
-🆘 *Bantuan Bot*
+    } else if (textLower.contains('help') || textLower.contains('assistance')) {
+      // Help
+      final helpMessage = '''
+🆘 *Bot Assistance*
 
-Saya bisa membalas:
-• Halo/Hai → Sapaan
-• Apa kabar → Menanyakan kabar  
-• Siapa kamu → Perkenalan
-• Bantuan → Menu ini
-• Waktu → Waktu sekarang
-• Gambar → Kirim gambar contoh
+I can reply to:
+• Hello/Hi → Greeting
+• How are you → Inquiry about well-being 
+• Who are you → Introduction
+• Help → This menu
+• Time → Current time
+• Image → Send example image
 
-Ketik salah satu kata kunci di atas!
+Type one of the keywords above!
       ''';
-      client.sendMessage(chat, text: pesanBantuan);
-      print('✅ Mengirim menu bantuan');
+      client.sendMessage(chat, text: helpMessage);
+      print('✅ Sent help menu');
       
-    } else if (teksLower.contains('waktu') || teksLower.contains('jam')) {
-      // Waktu sekarang
-      final waktuSekarang = DateTime.now();
-      final formatWaktu = '🕐 Waktu sekarang: ${waktuSekarang.day}/${waktuSekarang.month}/${waktuSekarang.year} ${waktuSekarang.hour}:${waktuSekarang.minute.toString().padLeft(2, '0')}';
-      client.sendMessage(chat, text: formatWaktu);
-      print('✅ Mengirim waktu');
+    } else if (textLower.contains('time') || textLower.contains('hour')) {
+      // Current time
+      final currentTime = DateTime.now();
+      final timeFormat = '🕐 Current time: ${currentTime.day}/${currentTime.month}/${currentTime.year} ${currentTime.hour}:${currentTime.minute.toString().padLeft(2, '0')}';
+      client.sendMessage(chat, text: timeFormat);
+      print('✅ Sent time');
       
-    } else if (teksLower.contains('gambar') || teksLower.contains('foto')) {
-      // Kirim gambar (jika ada)
-      kirimGambarContoh(client, chat);
+    } else if (textLower.contains('image') || textLower.contains('photo')) {
+      // Send image (if available)
+      sendExampleImage(client, chat);
       
-    } else if (teksLower.contains("build image")){
+    } else if (textLower.contains("build image")){
       buildImageMessage(client, chat, "test");
     }
     
   } catch (e) {
-    print('❌ Error saat membalas pesan: $e');
+    print('❌ Error while replying to message: $e');
   }
 }
 void buildImageMessage(NewAClient client, chat, String caption) {
-  // Path ke gambar - ganti dengan path gambar yang ada di sistem Anda
-  const pathGambar = '/home/krypton-byte/Downloads/_9aa4e484-ae7c-4f02-9b08-cf556f7ad727.jpg';
+  // Path to image - replace with an existing image path on your system
+  const imagePath = '/home/krypton-byte/Downloads/_9aa4e484-ae7c-4f02-9b08-cf556f7ad727.jpg';
   
   try {
-    final fileGambar = File(pathGambar);
+    final imageFile = File(imagePath);
     
-    if (!fileGambar.existsSync()) {
-      client.sendMessage(chat, text: '📷 Maaf, file gambar tidak ditemukan.');
-      print('⚠️ File gambar tidak ada: $pathGambar');
+    if (!imageFile.existsSync()) {
+      client.sendMessage(chat, text: '📷 Sorry, image file not found.');
+      print('⚠️ Image file does not exist: $imagePath');
       return;
     }
     
-    print('📸 Membaca file gambar...');
-    final bytesGambar = fileGambar.readAsBytesSync();
+    print('📸 Reading image file...');
+    final imageBytes = imageFile.readAsBytesSync();
     
-    print('📤 Mengirim gambar...');
+    print('📤 Sending image...');
     final message = client.buildImageMessage(
-      bytesGambar, 
+      imageBytes, 
       caption, 
       'image/jpeg', 
     );
-    print('🔧 Membangun pesan gambar... $message ');
+    print('🔧 Building image message... $message ');
     client.sendMessage(chat, message: message);
-    print('✅ Gambar berhasil dikirim');
+    print('✅ Image sent successfully');
     client.sendImage(
-      bytesGambar, 
+      imageBytes, 
       chat, 
       caption: caption,
     );
-    print('✅ Gambar berhasil dikirim dengan sendImage');
+    print('✅ Image sent successfully with sendImage');
   } catch (e) {
-    print('❌ Error mengirim gambar: $e');
-    client.sendMessage(chat, text: '❌ Maaf, terjadi error saat mengirim gambar.');
+    print('❌ Error sending image: $e');
+    client.sendMessage(chat, text: '❌ Sorry, an error occurred while sending the image.');
   }
 }
-/// Kirim gambar contoh (opsional)
-void kirimGambarContoh(NewAClient client, chat) {
-  // Path ke gambar - ganti dengan path gambar yang ada di sistem Anda
-  const pathGambar = '../assets/20250607_2049_Futuristic WhatsApp Automation_simple_compose_01jx5ac85hfk28c8bwq899sq58.png';
+/// Send example image (optional)
+void sendExampleImage(NewAClient client, chat) {
+  // Path to image - replace with an existing image path on your system
+  const imagePath = '../assets/20250607_2049_Futuristic WhatsApp Automation_simple_compose_01jx5ac85hfk28c8bwq899sq58.png';
   
   try {
-    final fileGambar = File(pathGambar);
+    final imageFile = File(imagePath);
     
-    if (!fileGambar.existsSync()) {
-      client.sendMessage(chat, text: '📷 Maaf, file gambar tidak ditemukan.');
-      print('⚠️ File gambar tidak ada: $pathGambar');
+    if (!imageFile.existsSync()) {
+      client.sendMessage(chat, text: '📷 Sorry, image file not found.');
+      print('⚠️ Image file does not exist: $imagePath');
       return;
     }
     
-    print('📸 Membaca file gambar...');
-    final bytesGambar = fileGambar.readAsBytesSync();
+    print('📸 Reading image file...');
+    final imageBytes = imageFile.readAsBytesSync();
     
-    print('📤 Mengirim gambar...');
+    print('📤 Sending image...');
     client.sendImage(
-      bytesGambar, 
+      imageBytes, 
       chat, 
-      caption: '📸 Ini adalah gambar contoh dari bot!',
+      caption: '📸 This is an example image from the bot!',
     );
     
-    print('✅ Gambar berhasil dikirim');
+    print('✅ Image sent successfully');
     
   } catch (e) {
-    print('❌ Error mengirim gambar: $e');
-    client.sendMessage(chat, text: '❌ Maaf, terjadi error saat mengirim gambar.');
+    print('❌ Error sending image: $e');
+    client.sendMessage(chat, text: '❌ Sorry, an error occurred while sending the image.');
   }
 }
 
-/// Jaga agar program tetap berjalan
+/// Keep program running
 void keepAlive() {
-  print('\n🔄 Bot berjalan... Tekan Ctrl+C untuk berhenti\n');
+  print('\n🔄 Bot is running... Press Ctrl+C to stop\n');
   
-  // Loop sederhana untuk menjaga program tetap hidup
+  // Simple loop to keep the program alive
   while (true) {
     sleep(Duration(seconds: 1));
   }

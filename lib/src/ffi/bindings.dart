@@ -1,4 +1,5 @@
 import 'dart:ffi' as ffi;
+import 'dart:io';
 import 'structs.dart';
 
 // typedef GetVersionFunc = ffi.Pointer<ffi.UnsignedChar> Function();
@@ -21,8 +22,9 @@ import 'structs.dart';
 // typedef TestParams = ffi.Pointer<ffi.Char> Function(ffi.Pointer<ffi.Char> name, int age);
 
 // final gocode = ffi.DynamicLibrary.open('/home/krypton-byte/dart/neonize/gox/neonize_lib.so');
+
 final gocode = ffi.DynamicLibrary.open(
-  '/home/krypton-byte/dart/neonize/neonize-linux-amd64.so',
+  Platform.environment['NEONIZE_PATH']??'neonize-linux-amd64.so',
 );
 // final GetVersion getVersion = gocode
 //     .lookup<ffi.NativeFunction<GetVersionFunc>>('GetVersion')

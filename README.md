@@ -73,7 +73,47 @@
 
 ### Installation
 
-Add `neonize_dart` to your `pubspec.yaml`:
+> ⚠️ **Since this project is still unstable**, please follow these manual installation steps:
+
+1. **Clone this repository**
+   ```bash
+   git clone https://github.com/krypton-byte/neonize-dart.git
+   cd neonize-dart
+   ```
+
+2. **Download the Neonize shared library**
+   - Go to [Neonize Releases](https://github.com/krypton-byte/neonize/releases/)
+   - Download the appropriate shared library for your platform:
+     - **Linux**: `.so` file
+     - **macOS**: `.dylib` file  
+     - **Windows**: `.dll` file
+
+3. **Set environment variable**
+   ```bash
+   # Set NEONIZE_PATH to point to your shared library location
+   export NEONIZE_PATH=/path/to/your/neonize-library.so
+   
+   # For Windows (PowerShell)
+   $env:NEONIZE_PATH="C:\path\to\your\neonize-library.dll"
+   
+   # For Windows (Command Prompt)
+   set NEONIZE_PATH=C:\path\to\your\neonize-library.dll
+   ```
+
+4. **Install dependencies**
+   ```bash
+   dart pub get
+   ```
+
+5. **Run the example**
+   ```bash
+   # You can run the example directly from the bin folder
+   dart run bin/main.dart
+   ```
+
+### Alternative Installation (When Stable)
+
+Once the project becomes stable, you'll be able to add it directly to your `pubspec.yaml`:
 
 ```yaml
 dependencies:

@@ -1,7 +1,8 @@
 name: neonize
-description: A sample command-line application.
+description: A Dart/Flutter library for WhatsApp automation and bot development, providing a high-level interface to interact with WhatsApp Web protocol through the Neonize Go library. Features include message handling, media support, QR code authentication, and comprehensive WhatsApp API integration.
 version: 1.0.0
-# repository: https://github.com/my_org/my_repo
+repository: https://github.com/krypton-byte/neonize-dart
+homepage: https://github.com/krypton-byte/neonize-dart
 
 environment:
   sdk: ^3.7.0
@@ -22,3 +23,12 @@ dependencies:
 dev_dependencies:
   lints: ^5.0.0
   test: ^1.24.0
+
+topics:
+  - whatsapp
+  - whatsapp-bot
+  - automation
+  - whatsmeow
+  - neonize
+  - websocket
+  - whatsapp-api

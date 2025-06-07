@@ -74,7 +74,6 @@ void compactQrTerminal(String qrData, int padding, {int size = 10}) {
 }
 
 void qrTerminal(String qrData, int padding, {int size = 4}) {
-  print("size: $size, padding: $padding");
   final qrCode = QrCode(size, QrErrorCorrectLevel.L);
   qrCode.addData(qrData);
   QrImage qrImage = QrImage(qrCode);
