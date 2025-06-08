@@ -70,7 +70,7 @@ void setupMessageHandler(NewAClient client) {
     print('📨 Incoming message: "$messageText"');
     
     // Reply to message based on content
-    replyToMessage(client, chat, messageText);
+    replyToMessage(client, chat, messageText, message);
     print('✅ Replied to message: "$messageText"');
   });
 }
@@ -84,7 +84,7 @@ void setupConnectionHandler(NewAClient client) {
 }
 
 /// Function to reply to messages
-void replyToMessage(NewAClient client, chat, String messageText) {
+void replyToMessage(NewAClient client, JID chat, String messageText, Message message) {
   final textLower = messageText.toLowerCase();
   
   try {
@@ -98,8 +98,15 @@ void replyToMessage(NewAClient client, chat, String messageText) {
       // Reply to inquiry about well-being
       client.sendMessage(chat, text: '😊 I am fine! Thank you for asking. How about you?');
       print('✅ Replied to well-being inquiry');
-      
-    } else if (textLower.contains('who are you') || textLower.contains('what is your name')) {
+    }else if (textLower.contains('mention')) {
+      // Reply to inquiry about the day
+      client.sendMessage(chat, text: '🌞 My day is going great! How about yours? @${chat.user}');
+      print('✅ Replied to day inquiry');
+    } else if(textLower.contains("reply")){
+      // Reply to inquiry about the day
+      client.sendMessage(chat, text: '🌞 My day is going great! How about yours? @${chat.user}', quoted: message);
+      print('✅ Replied to day inquiry');
+    }else if (textLower.contains('who are you') || textLower.contains('what is your name')) {
       // Introduction
       client.sendMessage(chat, text: '🤖 I am a WhatsApp bot created with Neonize. I can reply to your messages!');
       print('✅ Replied with introduction');
@@ -143,7 +150,7 @@ Type one of the keywords above!
 }
 void buildImageMessage(NewAClient client, chat, String caption) {
   // Path to image - replace with an existing image path on your system
-  const imagePath = '/home/krypton-byte/Downloads/_9aa4e484-ae7c-4f02-9b08-cf556f7ad727.jpg';
+  const imagePath = 'assets/20250607_2049_Futuristic WhatsApp Automation_simple_compose_01jx5ac85hfk28c8bwq899sq58.png';
   
   try {
     final imageFile = File(imagePath);
@@ -180,7 +187,7 @@ void buildImageMessage(NewAClient client, chat, String caption) {
 /// Send example image (optional)
 void sendExampleImage(NewAClient client, chat) {
   // Path to image - replace with an existing image path on your system
-  const imagePath = '../assets/20250607_2049_Futuristic WhatsApp Automation_simple_compose_01jx5ac85hfk28c8bwq899sq58.png';
+  const imagePath = 'assets/20250607_2049_Futuristic WhatsApp Automation_simple_compose_01jx5ac85hfk28c8bwq899sq58.png';
   
   try {
     final imageFile = File(imagePath);

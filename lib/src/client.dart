@@ -14,6 +14,8 @@ import 'package:neonize/src/ffi/bindings.dart' as binder;
 import 'package:neonize/src/defproto/waE2E/WAWebProtobufsE2E.pb.dart' as wa_e2e;
 import 'package:neonize/src/event/event.dart';
 import 'package:neonize/src/helpers/image.dart';
+import 'package:neonize/src/helpers/message.dart';
+import 'package:neonize/src/helpers/parser.dart';
 import 'package:neonize/src/logging.dart';
 import 'package:neonize/src/defproto/waCompanionReg/WACompanionReg.pb.dart';
 import 'package:protobuf/protobuf.dart';
@@ -98,24 +100,44 @@ class NewAClient {
     log.info('Media upload successful');
     return response.uploadResponse;
   }
-
   SendResponse sendMessage(
     JID to, {
     wa_e2e.Message? message,
     String? text,
+    Message? quoted,
+    List<String>? ghostMentions,
+    bool? privately
   }) {
+    List<String> mentions = [];
     if (message == null && text == null) {
       throw ValidationError('Either message or text must be provided', myId);
     }
+    if (ghostMentions != null) {
+      mentions.addAll(ghostMentions);
+    }
     if (message == null && text != null) {
-      message = wa_e2e.Message(conversation: text);
+      mentions = parseMention(text);
+      if(mentions.isNotEmpty || quoted != null){ 
+        message = wa_e2e.Message(
+          extendedTextMessage: wa_e2e.ExtendedTextMessage(
+            text: text,
+          )
+        );
+      }else{
+        message = wa_e2e.Message(conversation: text);
+      }
     }
     if (message != null) {
       log.info('Sending message to: ${to.user}');
-      
+      if(mentions.isNotEmpty){
+        setMention(message, mentions);
+      }
+      if(quoted != null){
+        privately ??= quoted.info.messageSource.chat.user != to.user;
+        setQuotedMessage(message, quoted, privately);
+      }
       final toBuffer = to.writeToBuffer();
       final messageBuffer = message.writeToBuffer();
-      
       final result = binder.sendMessage(
         uuid,
         bytesAllocator(toBuffer).cast<UnsignedChar>(),
@@ -123,20 +145,20 @@ class NewAClient {
         bytesAllocator(messageBuffer).cast<UnsignedChar>(),
         messageBuffer.length,
       );
-      
+
       final response = SendResponse.fromBuffer(Bytes(result).getBytes());
       log.info('Message sent successfully');
       return response;
     }
     throw SendMessageError('Message cannot be null', myId);
   }
-  SendResponse sendImage(Uint8List image, JID to, {
-    String? caption,
-  }) {
+
+  SendResponse sendImage(Uint8List image, JID to, {String? caption}) {
     log.info('Sending image to: ${to.user} (${image.length} bytes)');
-    final message = buildImageMessage(image, caption??"", "image/jpeg");
+    final message = buildImageMessage(image, caption ?? "", "image/jpeg");
     return sendMessage(to, message: message);
   }
+
   void connect() {
     final devicePropsBytes = devicePropsConfig.writeToBuffer();
     Uint8List jidbuff = Uint8List(0);
@@ -145,11 +167,11 @@ class NewAClient {
     }
     final loglevel = "INFO";
     final subscribers = event.getSubscriber();
-    
+
     log.info('Connecting to WhatsApp...');
     log.fine('Database: ${config.databasePath}');
     log.fine('Device: $myId');
-    
+
     final emitter = NativeCallable<binder.EventCallback>.isolateLocal(
       event.rawEmit,
     );
@@ -160,7 +182,7 @@ class NewAClient {
         NativeCallable<binder.OnLogginStatusCallback>.isolateLocal(
           event.onLogginStatus,
         );
-    
+
     binder.connect(
       config.databasePath.toNativeUtf8().cast<Char>(),
       uuid,
@@ -174,9 +196,7 @@ class NewAClient {
       subscribers.length,
       bytesAllocator(devicePropsBytes).cast<UnsignedChar>(),
       devicePropsBytes.length,
-      bytesAllocator(
-        Uint8List(0),
-      ).cast<UnsignedChar>(),
+      bytesAllocator(Uint8List(0)).cast<UnsignedChar>(),
       0,
     );
     log.info('Connection initiated successfully');
@@ -287,7 +307,9 @@ class NewAClient {
       bytesAllocator(groupJidBuffer).cast<UnsignedChar>(),
       groupJidBuffer.length,
     );
-    return GetGroupRequestParticipantsReturnFunction.fromBuffer(Bytes(response).getBytes());
+    return GetGroupRequestParticipantsReturnFunction.fromBuffer(
+      Bytes(response).getBytes(),
+    );
   }
 
   ReturnFunctionWithError getLinkedGroupParticipants(JID groupJid) {
@@ -342,7 +364,10 @@ class NewAClient {
     return result.cast<Utf8>().toDartString();
   }
 
-  GetGroupInviteLinkReturnFunction getGroupInviteLink(JID groupJid, bool revoke) {
+  GetGroupInviteLinkReturnFunction getGroupInviteLink(
+    JID groupJid,
+    bool revoke,
+  ) {
     final groupJidBuffer = groupJid.writeToBuffer();
     final result = binder.getGroupInviteLink(
       uuid,
@@ -350,7 +375,9 @@ class NewAClient {
       groupJidBuffer.length,
       revoke,
     );
-    return GetGroupInviteLinkReturnFunction.fromBuffer(Bytes(result).getBytes());
+    return GetGroupInviteLinkReturnFunction.fromBuffer(
+      Bytes(result).getBytes(),
+    );
   }
 
   JoinGroupWithLinkReturnFunction joinGroupWithLink(String link) {
@@ -445,11 +472,12 @@ class NewAClient {
     String description,
     Uint8List picture,
   ) {
-    final params = CreateNewsletterParams(
-      name: name,
-      description: description,
-      picture: picture,
-    ).writeToBuffer();
+    final params =
+        CreateNewsletterParams(
+          name: name,
+          description: description,
+          picture: picture,
+        ).writeToBuffer();
     final result = binder.createNewsletter(
       uuid,
       bytesAllocator(params).cast<UnsignedChar>(),
@@ -468,7 +496,10 @@ class NewAClient {
     return CreateNewsLetterReturnFunction.fromBuffer(Bytes(result).getBytes());
   }
 
-  CreateNewsLetterReturnFunction getNewsletterInfoWithInvite(String id, String key) {
+  CreateNewsLetterReturnFunction getNewsletterInfoWithInvite(
+    String id,
+    String key,
+  ) {
     final result = binder.getNewsletterInfoWithInvite(
       uuid,
       id.toNativeUtf8().cast<Char>(),
@@ -517,7 +548,8 @@ class NewAClient {
     enums.ReceiptType receiptType, [
     DateTime? timestamps,
   ]) {
-    final timestampsParams = (timestamps ?? DateTime.now()).millisecondsSinceEpoch;
+    final timestampsParams =
+        (timestamps ?? DateTime.now()).millisecondsSinceEpoch;
     final chatBuffer = chat.writeToBuffer();
     final senderBuffer = sender.writeToBuffer();
     final ids = messageIds.join(" ");
@@ -603,7 +635,9 @@ class NewAClient {
       uuid,
       code.toNativeUtf8().cast<Char>(),
     );
-    return ResolveContactQRLinkReturnFunction.fromBuffer(Bytes(result).getBytes());
+    return ResolveContactQRLinkReturnFunction.fromBuffer(
+      Bytes(result).getBytes(),
+    );
   }
 
   void sendAppState(PatchInfo patchInfo) {
@@ -707,7 +741,10 @@ class NewAClient {
     }
   }
 
-  GetBlocklistReturnFunction updateBlocklist(JID jid, enums.BlocklistAction action) {
+  GetBlocklistReturnFunction updateBlocklist(
+    JID jid,
+    enums.BlocklistAction action,
+  ) {
     final jidBuffer = jid.writeToBuffer();
     final result = binder.updateBlocklist(
       uuid,
@@ -715,7 +752,9 @@ class NewAClient {
       jidBuffer.length,
       action.value.toNativeUtf8().cast<Char>(),
     );
-    final response = GetBlocklistReturnFunction.fromBuffer(Bytes(result).getBytes());
+    final response = GetBlocklistReturnFunction.fromBuffer(
+      Bytes(result).getBytes(),
+    );
     if (response.error != "") {
       throw ContactError(response.error, myId);
     }
@@ -765,7 +804,9 @@ class NewAClient {
       bytesAllocator(paramsBuffer).cast<UnsignedChar>(),
       paramsBuffer.length,
     );
-    final response = GetProfilePictureReturnFunction.fromBuffer(Bytes(result).getBytes());
+    final response = GetProfilePictureReturnFunction.fromBuffer(
+      Bytes(result).getBytes(),
+    );
     if (response.error != "") {
       throw ProfileError(response.error, myId);
     }
@@ -774,7 +815,9 @@ class NewAClient {
 
   GetStatusPrivacyReturnFunction getStatusPrivacy() {
     final result = binder.getStatusPrivacy(uuid);
-    final response = GetStatusPrivacyReturnFunction.fromBuffer(Bytes(result).getBytes());
+    final response = GetStatusPrivacyReturnFunction.fromBuffer(
+      Bytes(result).getBytes(),
+    );
     if (response.error != "") {
       throw PrivacyError(response.error, myId);
     }
@@ -788,7 +831,9 @@ class NewAClient {
       bytesAllocator(groupJidBuffer).cast<UnsignedChar>(),
       groupJidBuffer.length,
     );
-    final response = GetSubGroupsReturnFunction.fromBuffer(Bytes(result).getBytes());
+    final response = GetSubGroupsReturnFunction.fromBuffer(
+      Bytes(result).getBytes(),
+    );
     if (response.error != "") {
       throw GroupError(response.error, myId);
     }
@@ -797,7 +842,9 @@ class NewAClient {
 
   GetSubscribedNewslettersReturnFunction getSubscribedNewsletters() {
     final result = binder.getSubscribedNewsletters(uuid);
-    final response = GetSubscribedNewslettersReturnFunction.fromBuffer(Bytes(result).getBytes());
+    final response = GetSubscribedNewslettersReturnFunction.fromBuffer(
+      Bytes(result).getBytes(),
+    );
     if (response.error != "") {
       throw NewsletterError(response.error, myId);
     }
@@ -811,7 +858,9 @@ class NewAClient {
       bytesAllocator(jidBuffer).cast<UnsignedChar>(),
       jidBuffer.length,
     );
-    final response = GetUserDevicesreturnFunction.fromBuffer(Bytes(result).getBytes());
+    final response = GetUserDevicesreturnFunction.fromBuffer(
+      Bytes(result).getBytes(),
+    );
     if (response.error != "") {
       throw DeviceError(response.error, myId);
     }
@@ -820,7 +869,9 @@ class NewAClient {
 
   GetBlocklistReturnFunction getBlocklist() {
     final result = binder.getBlocklist(uuid);
-    final response = GetBlocklistReturnFunction.fromBuffer(Bytes(result).getBytes());
+    final response = GetBlocklistReturnFunction.fromBuffer(
+      Bytes(result).getBytes(),
+    );
     if (response.error != "") {
       throw ContactError(response.error, myId);
     }
@@ -840,14 +891,21 @@ class NewAClient {
       bytesAllocator(optionsBuffer).cast<UnsignedChar>(),
       optionsBuffer.length,
     );
-    final response = BuildPollVoteReturnFunction.fromBuffer(Bytes(result).getBytes());
+    final response = BuildPollVoteReturnFunction.fromBuffer(
+      Bytes(result).getBytes(),
+    );
     if (response.error != "") {
       throw PollError(response.error, myId);
     }
     return response;
   }
 
-  wa_e2e.Message buildReaction(JID chat, JID sender, String reaction, String messageId) {
+  wa_e2e.Message buildReaction(
+    JID chat,
+    JID sender,
+    String reaction,
+    String messageId,
+  ) {
     final chatBuffer = chat.writeToBuffer();
     final senderBuffer = sender.writeToBuffer();
     final result = binder.buildReaction(
@@ -885,7 +943,9 @@ class NewAClient {
 
   GetJoinedGroupsReturnFunction getJoinedGroups() {
     final result = binder.getJoinedGroups(uuid);
-    final response = GetJoinedGroupsReturnFunction.fromBuffer(Bytes(result).getBytes());
+    final response = GetJoinedGroupsReturnFunction.fromBuffer(
+      Bytes(result).getBytes(),
+    );
     if (response.error != "") {
       throw GroupError(response.error, myId);
     }
@@ -917,7 +977,9 @@ class NewAClient {
       toBuffer.length,
       messageId.toNativeUtf8().cast<Char>(),
     );
-    return GetMessageForRetryReturnFunction.fromBuffer(Bytes(result).getBytes());
+    return GetMessageForRetryReturnFunction.fromBuffer(
+      Bytes(result).getBytes(),
+    );
   }
 
   void putPinned(JID chat, bool pinned) {
@@ -957,6 +1019,34 @@ class NewAClient {
     return response;
   }
 
+  wa_e2e.Message buildDocumentMessage(
+    Uint8List document,
+    String fileName,
+    String mime, {
+    wa_e2e.Message? quoted,
+    bool? viewonce,
+  }) {
+    log.info('Building document message (${document.length} bytes)');
+    final uploadResponse = upload(document, enums.MediaType.mediaDocument);
+    log.fine('Document uploaded: ${uploadResponse.url}');
+    final docMessage = wa_e2e.Message(
+      documentMessage: wa_e2e.DocumentMessage(
+        uRL: uploadResponse.url,
+        fileName: fileName,
+        mimetype: mime,
+        directPath: uploadResponse.directPath,
+        fileLength: fixnum.Int64(uploadResponse.fileLength),
+        fileEncSHA256: uploadResponse.fileEncSHA256,
+        fileSHA256: uploadResponse.fileSHA256,
+        mediaKey: uploadResponse.mediaKey,
+      ),
+    );
+    if (quoted != null) {
+      docMessage.documentMessage.contextInfo.quotedMessage = quoted;
+    }
+    return docMessage;
+  }
+
   wa_e2e.Message buildImageMessage(
     Uint8List image,
     String caption,
@@ -973,7 +1063,10 @@ class NewAClient {
     }
     final thumbnail = scaleMaxSize(im, 512);
     final jpegThumbnail = img.encodeJpg(thumbnail, quality: 80);
-    final thumbnailUploadResponse = upload(jpegThumbnail, enums.MediaType.mediaLinkThumbnail);
+    final thumbnailUploadResponse = upload(
+      jpegThumbnail,
+      enums.MediaType.mediaLinkThumbnail,
+    );
     final imgMessage = wa_e2e.Message(
       imageMessage: wa_e2e.ImageMessage(
         uRL: uploadResponse.url,
